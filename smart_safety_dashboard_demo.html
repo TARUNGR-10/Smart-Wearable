@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Safety System</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f3f6fb;
+      color: #182230;
+    }
+
+    header {
+      background: #172b4d;
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    header h1 { margin: 0; font-size: 26px; }
+    header p { margin: 6px 0 0; color: #d5dfef; }
+
+    main {
+      max-width: 1100px;
+      margin: 25px auto;
+      padding: 0 16px;
+    }
+
+    .panel, .alert, .stat {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 5px 18px #172b4d0a;
+    }
+
+    .notice {
+      background: #fff7e8;
+      border: 1px solid #f4d7a0;
+      padding: 14px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    button, .button {
+      display: inline-block;
+      border: 0;
+      border-radius: 9px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: wait;
+    }
+
+    .primary { background: #2457d6; color: white; }
+    .secondary { background: white; border: 1px solid #cbd5e1; color: #24344e; }
+    .danger { background: #b42318; color: white; }
+    .success { background: #eaf8f0; color: #137a50; }
+
+    .hidden { display: none !important; }
+    .muted { color: #64748b; }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin: 20px 0;
+    }
+
+    .stat { margin: 0; }
+    .number { font-size: 28px; font-weight: bold; margin-top: 8px; }
+
+    .alerts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .alert { margin: 0; overflow-wrap: anywhere; }
+
+    .alert-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .badge {
+      font-size: 12px;
+      padding: 5px 8px;
+      border-radius: 20px;
+      background: #fff4dc;
+      color: #9a5b00;
+    }
+
+    .badge.ack { background: #eaf8f0; color: #137a50; }
+
+    .coords {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .coord {
+      background: #f7f9fc;
+      border: 1px solid #edf1f6;
+      border-radius: 9px;
+      padding: 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .coord span {
+      display: block;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+
+    .error { color: #b42318; white-space: pre-wrap; }
+    .ok { color: #137a50; white-space: pre-wrap; }
+
+    #feedback, #appFeedback, #womanFeedback {
+      font-size: 14px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #64748b;
+      font-size: 13px;
+    }
+
+    @media (max-width: 700px) {
+      .stats, .alerts { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <div>
+    <h1>Smart Safety System</h1>
+    <p>Emergency alerts and location dashboard</p>
+  </div>
+
+  <div class="row">
+    <span id="accountLabel"></span>
+    <button id="signOutBtn" class="secondary hidden">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <div class="notice">
+    <strong>Prototype notice:</strong>
+    This is a project prototype, not a certified emergency service.
+    Test it before use. The website test button does not activate the physical ESP32.
+  </div>
+
+  <section id="loginPanel" class="panel">
+    <h2>Sign in</h2>
+    <p class="muted">Use an account created in Firebase Authentication.</p>
+
+    <div class="row" style="margin-bottom:12px">
+      <button id="showSignInButton" class="primary" type="button">Sign in</button>
+      <button id="showRegisterButton" class="secondary" type="button">Create Woman account</button>
+    </div>
+
+    <form id="loginForm">
+      <label for="email">Email address</label>
+      <input id="email" type="email" autocomplete="username" required>
+
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+
+      <button id="loginButton" class="primary" style="margin-top:16px" type="submit">
+        Sign in
+      </button>
+    </form>
+
+    <form id="registerForm" class="hidden">
+      <label for="registerName">Full name</label>
+      <input id="registerName" type="text" autocomplete="name" maxlength="100" required>
+
+      <label for="registerEmail">Email address</label>
+      <input id="registerEmail" type="email" autocomplete="email" required>
+
+      <label for="registerPassword">Password (at least 6 characters)</label>
+      <input id="registerPassword" type="password" autocomplete="new-password" minlength="6" required>
+
+      <label for="confirmPassword">Confirm password</label>
+      <input id="confirmPassword" type="password" autocomplete="new-password" minlength="6" required>
+
+      <button id="registerButton" class="primary" style="margin-top:16px" type="submit">
+        Create Woman account
+      </button>
+    </form>
+
+    <button id="resetPasswordButton" class="secondary" style="margin-top:10px" type="button">
+      Forgot / Reset password
+    </button>
+    <div id="feedback" role="status"></div>
+  </section>
+
+  <section id="appPanel" class="hidden">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageDescription" class="muted"></p>
+      </div>
+      <button id="refreshButton" class="secondary">Refresh alerts</button>
+    </div>
+
+    <section id="parentView" class="hidden">
+      <div class="stats">
+        <div class="stat">
+          <div class="muted">Total alerts</div>
+          <div id="totalCount" class="number">0</div>
+        </div>
+        <div class="stat">
+          <div class="muted">Needs attention</div>
+          <div id="pendingCount" class="number">0</div>
+        </div>
+        <div class="stat">
+          <div class="muted">Acknowledged</div>
+          <div id="ackCount" class="number">0</div>
+        </div>
+      </div>
+
+      <h3>Recent SOS alerts</h3>
+      <div id="parentAlerts" class="alerts"></div>
+    </section>
+
+    <section id="womanView" class="hidden">
+      <div class="panel">
+        <h3>Send a website test SOS</h3>
+        <p class="muted">
+          This test requests your browser's current location and stores it in Firestore.
+          It does not activate the ESP32.
+        </p>
+
+        <button id="sendTestSOS" class="danger">
+          Get location and send test alert
+        </button>
+
+        <div id="womanFeedback" role="status"></div>
+      </div>
+
+      <h3>My recent alerts</h3>
+      <div id="womanAlerts" class="alerts"></div>
+    </section>
+
+    <div id="appFeedback" role="status"></div>
+  </section>
+</main>
+
+<footer>Smart Safety System · Prototype dashboard</footer>
+
+<script type="module">
+  import { initializeApp } from
+    "https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js";
+
+  import {
+    getAuth,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    sendPasswordResetEmail,
+    signOut,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-auth.js";
+
+  import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc,
+    collection,
+    addDoc,
+    updateDoc,
+    onSnapshot,
+    query,
+    where,
+    orderBy,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js";
+
+
+  // IMPORTANT:
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBo6AOobDbOlfXaJgKq4B550CLVN3YzOWU",
+  authDomain: "smart-wearable-system.firebaseapp.com",
+  projectId: "smart-wearable-system",
+  storageBucket: "smart-wearable-system.firebasestorage.app",
+  messagingSenderId: "329106360022",
+  appId: "1:329106360022:web:22eddb1e3b600149bb2b77",
+  measurementId: "G-6FFSSHQBP6"
+};
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  console.log("Firebase app options:", app.options);
+console.log("Firestore instance:", db);
+  window.checkFirebaseConnection = async function () {
+  console.log("Firebase project:", app.options.projectId);
+  console.log("Firestore project:", db.app.options.projectId);
+  console.log("Signed-in UID:", auth.currentUser?.uid);
+
+  if (!auth.currentUser) {
+    console.error("No user is signed in.");
+    return;
+  }
+
+  try {
+    const userRef = doc(db, "users", auth.currentUser.uid);
+    const result = await getDoc(userRef);
+
+    console.log("User document exists:", result.exists());
+
+    if (result.exists()) {
+      console.log("User document data:", result.data());
+    } else {
+      console.error("No document found at:", userRef.path);
+    }
+  } catch (error) {
+    console.error("Firestore error:", error.code, error.message);
+  }
+};
+  console.log("Firebase project:", firebaseConfig.projectId);
+console.log("Firestore app name:", db.app.name);
+console.log("Firestore app project:", db.app.options.projectId);
+console.log("Authenticated UID:", auth.currentUser?.uid);
+ window.testParentProfile = async function () {
+  const user = auth.currentUser;
+
+  console.log("Project:", firebaseConfig.projectId);
+  console.log("Signed in:", !!user);
+  console.log("UID:", user?.uid);
+
+  if (!user) {
+    console.error("Please sign in first.");
+    return;
+  }
+
+  try {
+    const profileRef = doc(db, "users", user.uid);
+
+    console.log("Document path:", profileRef.path);
+
+    const result = await getDoc(profileRef);
+
+    console.log("Exists:", result.exists());
+
+    if (result.exists()) {
+      console.log("Data:", result.data());
+    } else {
+      console.error(
+        "Document not found at:",
+        `users/${user.uid}`
+      );
+      console.log(
+        "Check that the Firestore Console and website use the same project and database."
+      );
+    }
+  } catch (error) {
+    console.error("Firestore error:", error.code, error.message);
+  }
+};
+  const $ = id => document.getElementById(id);
+
+  let currentUser = null;
+  let currentRole = null;
+  let stopAlertsListener = null;
+  let alerts = [];
+
+  function message(id, text, type = "") {
+    $(id).textContent = text;
+    $(id).className = type;
+  }
+
+  function showLoggedIn(isLoggedIn) {
+    $("loginPanel").classList.toggle("hidden", isLoggedIn);
+    $("appPanel").classList.toggle("hidden", !isLoggedIn);
+    $("signOutBtn").classList.toggle("hidden", !isLoggedIn);
+  }
+
+  function escapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[char]));
+  }
+
+  function formatTime(value) {
+    if (!value) return "Time not recorded";
+
+    try {
+      const date = value.toDate ? value.toDate() : new Date(value);
+      return date.toLocaleString();
+    } catch {
+      return "Time not recorded";
+    }
+  }
+
+  function makeAlertCard(alert, allowAcknowledge) {
+    const lat = Number(alert.latitude);
+    const lon = Number(alert.longitude);
+
+    const validCoordinates =
+      Number.isFinite(lat) &&
+      Number.isFinite(lon) &&
+      lat >= -90 && lat <= 90 &&
+      lon >= -180 && lon <= 180;
+
+    const acknowledged =
+      alert.status === "acknowledged" ||
+      alert.acknowledged === true;
+
+    const mapButton = validCoordinates
+      ? `<a class="button primary" target="_blank" rel="noopener noreferrer"
+           href="https://www.google.com/maps?q=${lat},${lon}">Open in Google Maps</a>`
+      : `<span class="muted">Location unavailable</span>`;
+
+    const acknowledgeButton =
+      allowAcknowledge && !acknowledged
+        ? `<button class="success" data-ack-id="${escapeHTML(alert.id)}">I've Reached Her — Safe</button>`
+        : "";
+
+    return `
+      <article class="alert">
+        <div class="alert-top">
+          <div>
+            <strong>${escapeHTML(alert.message || "SOS alert")}</strong>
+            <div class="muted" style="font-size:12px;margin-top:6px">
+              ${escapeHTML(formatTime(alert.createdAt))}
+            </div>
+          </div>
+          <span class="badge ${acknowledged ? "ack" : ""}">
+            ${acknowledged ? "Acknowledged" : escapeHTML(alert.status || "new")}
+          </span>
+        </div>
+
+        <div class="coords">
+          <div class="coord">
+            <span>Latitude</span>
+            <strong>${validCoordinates ? lat : "Unavailable"}</strong>
+          </div>
+          <div class="coord">
+            <span>Longitude</span>
+            <strong>${validCoordinates ? lon : "Unavailable"}</strong>
+          </div>
+        </div>
+
+        <p class="muted">${escapeHTML(alert.details || "")}</p>
+        <div class="row">${mapButton}${acknowledgeButton}</div>
+      </article>`;
+  }
+
+  function renderAlerts() {
+    const parentList = $("parentAlerts");
+    const womanList = $("womanAlerts");
+
+    parentList.innerHTML = alerts.length
+      ? alerts.map(alert =>
+          makeAlertCard(alert, currentRole === "parent")
+        ).join("")
+      : '<p class="muted">No alerts found in Firestore yet.</p>';
+
+    const ownAlerts = alerts.filter(
+      alert => alert.userId === currentUser?.uid
+    );
+
+    womanList.innerHTML = ownAlerts.length
+      ? ownAlerts.map(alert => makeAlertCard(alert, false)).join("")
+      : '<p class="muted">You have not submitted any alerts yet.</p>';
+
+    const acknowledgedCount = alerts.filter(alert =>
+      alert.status === "acknowledged" ||
+      alert.acknowledged === true
+    ).length;
+
+    $("totalCount").textContent = alerts.length;
+    $("pendingCount").textContent = alerts.length - acknowledgedCount;
+    $("ackCount").textContent = acknowledgedCount;
+
+    document.querySelectorAll("[data-ack-id]").forEach(button => {
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+
+        try {
+          await updateDoc(doc(db, "alerts", button.dataset.ackId), {
+            status: "acknowledged",
+            acknowledged: true,
+            acknowledgedAt: serverTimestamp()
+          });
+
+          message("appFeedback", "Alert acknowledged.", "ok");
+        } catch (error) {
+          message(
+            "appFeedback",
+            "Could not acknowledge alert: " + error.message,
+            "error"
+          );
+          button.disabled = false;
+        }
+      });
+    });
+  }
+
+  function listenForAlerts() {
+    if (stopAlertsListener) stopAlertsListener();
+
+    message("appFeedback", "Connecting to Firestore…");
+
+    // Firestore rules require Woman accounts to query only their own alerts.
+    // Parents may query all alerts; Women must filter by their UID.
+    // Parents can order all alerts by createdAt with a single-field index.
+    // Woman alerts are filtered by userId, then sorted in the browser to avoid
+    // requiring a composite Firestore index (userId + createdAt).
+    const alertsQuery = currentRole === "parent"
+      ? query(
+          collection(db, "alerts"),
+          orderBy("createdAt", "desc")
+        )
+      : query(
+          collection(db, "alerts"),
+          where("userId", "==", currentUser.uid)
+        );
+
+    stopAlertsListener = onSnapshot(
+      alertsQuery,
+      snapshot => {
+        alerts = snapshot.docs.map(item => ({
+          id: item.id,
+          ...item.data()
+        }));
+
+        // Keep newest alerts first. Supports Firestore Timestamp and missing dates.
+        alerts.sort((a, b) => {
+          const toMillis = value => {
+            if (!value) return 0;
+            if (typeof value.toMillis === "function") return value.toMillis();
+            const parsed = new Date(value).getTime();
+            return Number.isFinite(parsed) ? parsed : 0;
+          };
+          return toMillis(b.createdAt) - toMillis(a.createdAt);
+        });
+
+        renderAlerts();
+        message(
+          "appFeedback",
+          "Connected to Firestore. Live updates enabled.",
+          "ok"
+        );
+      },
+      error => {
+        message(
+          "appFeedback",
+          "Unable to read alerts.\n" +
+          "Error code: " + (error.code || "unknown") + "\n" +
+          "Details: " + error.message +
+          "\nCheck your Firestore rules and alert fields.",
+          "error"
+        );
+      }
+    );
+  }
+
+  // Improved profile lookup and error reporting.
+  async function loadUser(user) {
+    currentUser = user;
+    message("appFeedback", "Checking user profile…");
+
+    try {
+      const profileRef = doc(db, "users", user.uid);
+      const profile = await getDoc(profileRef);
+
+      if (!profile.exists()) {
+        message(
+          "appFeedback",
+          "Profile document not found.\n" +
+          "Signed-in UID: " + user.uid + "\n" +
+          "Firebase project: " + firebaseConfig.projectId,
+          "error"
+        );
+        showLoggedIn(true);
+        return;
+      }
+
+      const data = profile.data();
+      currentRole = data.role;
+
+      if (
+        data.active !== true ||
+        !["parent", "woman"].includes(currentRole)
+      ) {
+        message(
+          "appFeedback",
+          'Profile found, but role or active is incorrect.\n' +
+          'Expected role "parent" or "woman" and active=true.',
+          "error"
+        );
+        showLoggedIn(true);
+        return;
+      }
+
+      showLoggedIn(true);
+
+      $("accountLabel").textContent = currentRole;
+      $("pageTitle").textContent =
+        currentRole === "parent"
+          ? "Parent Dashboard"
+          : "Woman's Status";
+
+      $("pageDescription").textContent =
+        currentRole === "parent"
+          ? "View SOS alerts and acknowledge emergencies."
+          : "Check your alert history and send a website test alert.";
+
+      $("parentView").classList.toggle(
+        "hidden",
+        currentRole !== "parent"
+      );
+
+      $("womanView").classList.toggle(
+        "hidden",
+        currentRole !== "woman"
+      );
+
+      listenForAlerts();
+
+    } catch (error) {
+      showLoggedIn(true);
+
+      message(
+        "appFeedback",
+        "Profile lookup failed.\n" +
+        "Error code: " + (error.code || "unknown") + "\n" +
+        "Details: " + error.message,
+        "error"
+      );
+    }
+  }
+
+  // Password reset works for either account (Parent or Woman).
+  // Enter the account email in the Email address field before clicking this button.
+  $("resetPasswordButton").addEventListener("click", async () => {
+    const email = $("email").value.trim();
+
+    if (!email) {
+      message("feedback", "Enter your Parent or Woman account email first.", "error");
+      $("email").focus();
+      return;
+    }
+
+    const button = $("resetPasswordButton");
+    button.disabled = true;
+    message("feedback", "Sending password-reset email…");
+
+    try {
+      await sendPasswordResetEmail(auth, email);
+      message(
+        "feedback",
+        "If this email belongs to an account, Firebase has sent a password-reset link. Check the inbox and spam folder, then follow the link to choose a new password.",
+        "ok"
+      );
+    } catch (error) {
+      // Firebase may return a configuration or invalid-email error.
+      message("feedback", "Could not send reset email: " + error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  // Public registration is restricted to Woman accounts only.
+  $("showSignInButton").addEventListener("click", () => {
+    $("loginForm").classList.remove("hidden");
+    $("registerForm").classList.add("hidden");
+    $("showSignInButton").className = "primary";
+    $("showRegisterButton").className = "secondary";
+    message("feedback", "");
+  });
+
+  $("showRegisterButton").addEventListener("click", () => {
+    $("loginForm").classList.add("hidden");
+    $("registerForm").classList.remove("hidden");
+    $("showSignInButton").className = "secondary";
+    $("showRegisterButton").className = "primary";
+    message("feedback", "Self-registration is for Woman accounts only. Parent accounts must be created or approved by an administrator.", "");
+  });
+
+  $("registerForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const name = $("registerName").value.trim();
+    const email = $("registerEmail").value.trim();
+    const password = $("registerPassword").value;
+    const confirmPassword = $("confirmPassword").value;
+    const button = $("registerButton");
+
+    if (password.length < 6) {
+      message("feedback", "Password must be at least 6 characters.", "error");
+      return;
+    }
+    if (password !== confirmPassword) {
+      message("feedback", "Passwords do not match.", "error");
+      return;
+    }
+
+    button.disabled = true;
+    message("feedback", "Creating your Woman account…");
+
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "users", credential.user.uid), {
+        name,
+        role: "woman",
+        active: true
+      });
+
+      // Load the profile after it has been written to avoid a brief
+      // "Profile document not found" race during first registration.
+      await loadUser(credential.user);
+
+      message("feedback", "Account created successfully.", "ok");
+      $("registerForm").reset();
+    } catch (error) {
+      message(
+        "feedback",
+        "Registration failed: " + (error.code || "") + " " + error.message +
+        (error.code === "permission-denied"
+          ? "\\nUpdate Firestore rules to permit a user to create only their own profile with role='woman' and active=true."
+          : ""),
+        "error"
+      );
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  $("loginForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    $("loginButton").disabled = true;
+    message("feedback", "Signing in…");
+
+    try {
+      await signInWithEmailAndPassword(
+        auth,
+        $("email").value.trim(),
+        $("password").value
+      );
+
+      message("feedback", "");
+    } catch (error) {
+      message(
+        "feedback",
+        "Sign-in failed: " + error.message,
+        "error"
+      );
+    } finally {
+      $("loginButton").disabled = false;
+    }
+  });
+
+  $("signOutBtn").addEventListener("click", async () => {
+    if (stopAlertsListener) stopAlertsListener();
+
+    stopAlertsListener = null;
+    await signOut(auth);
+  });
+
+  $("refreshButton").addEventListener("click", () => {
+    if (currentUser && currentRole) {
+      listenForAlerts();
+    }
+  });
+
+  $("sendTestSOS").addEventListener("click", () => {
+    if (!navigator.geolocation) {
+      message(
+        "womanFeedback",
+        "Your browser does not support location access.",
+        "error"
+      );
+      return;
+    }
+
+    const button = $("sendTestSOS");
+    button.disabled = true;
+    message("womanFeedback", "Requesting your current location…");
+
+    navigator.geolocation.getCurrentPosition(
+      async position => {
+        try {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+
+          await addDoc(collection(db, "alerts"), {
+            userId: currentUser.uid,
+            latitude,
+            longitude,
+            message: "Website test SOS alert",
+            details: "Created from the website test button. Not from the ESP32.",
+            status: "new",
+            acknowledged: false,
+            createdAt: serverTimestamp()
+          });
+
+          message(
+            "womanFeedback",
+            `Test alert saved!\nLatitude: ${latitude}\nLongitude: ${longitude}`,
+            "ok"
+          );
+        } catch (error) {
+          message(
+            "womanFeedback",
+            "Could not save alert.\n" +
+            "Error code: " + (error.code || "unknown") + "\n" +
+            error.message,
+            "error"
+          );
+        } finally {
+          button.disabled = false;
+        }
+      },
+      error => {
+        message(
+          "womanFeedback",
+          "Could not get location: " + error.message +
+          "\nAllow location permission in your browser and try again.",
+          "error"
+        );
+
+        button.disabled = false;
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+      }
+    );
+  });
+
+  onAuthStateChanged(auth, async user => {
+    if (stopAlertsListener) stopAlertsListener();
+
+    stopAlertsListener = null;
+    alerts = [];
+
+    if (!user) {
+      currentUser = null;
+      currentRole = null;
+      $("accountLabel").textContent = "";
+      showLoggedIn(false);
+      return;
+    }
+
+    try {
+      await loadUser(user);
+    } catch (error) {
+      showLoggedIn(true);
+
+      message(
+        "appFeedback",
+        "Could not load account.\n" +
+        "Error code: " + (error.code || "unknown") + "\n" +
+        error.message,
+        "error"
+      );
+    }
+  });
+
+  console.log("Smart Safety System Firebase app initialized.");
+</script>
+
+</body>
+</html>
